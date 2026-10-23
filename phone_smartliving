@@ -1,0 +1,219 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Ticket, Wrench, Nfc, Siren, Check, Copy, RotateCcw, Camera, ShieldCheck, Stethoscope, Plus, Megaphone, KeyRound } from "lucide-react";
+import { C } from "./theme";
+
+export const TABS = [
+  { id: "pass", label: "Pass", icon: Ticket },
+  { id: "tickets", label: "Repairs", icon: Wrench },
+  { id: "nfc", label: "Key", icon: Nfc },
+  { id: "hub", label: "Hub", icon: Siren },
+];
+
+function hash(str) { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function PassCode({ seed, size = 132 }) {
+  const N = 23;
+  const cells = useMemo(() => {
+    let h = hash(seed); const out = [];
+    const finder = (r, c) => { for (const [fr, fc] of [[0, 0], [0, N - 7], [N - 7, 0]]) { const y = r - fr, x = c - fc; if (y >= 0 && y < 7 && x >= 0 && x < 7) return (y === 0 || y === 6 || x === 0 || x === 6 || (y > 1 && y < 5 && x > 1 && x < 5)) ? 1 : 0; if (y >= -1 && y <= 7 && x >= -1 && x <= 7) return 0; } return null; };
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { const f = finder(r, c); if (f !== null) { if (f) out.push([r, c]); continue; } h ^= h << 13; h ^= h >>> 17; h ^= h << 5; h >>>= 0; if (h % 100 < 47) out.push([r, c]); }
+    return out;
+  }, [seed]);
+  return (
+    <svg viewBox={`-1 -1 ${N + 2} ${N + 2}`} width={size} height={size} aria-label="Visitor pass code">
+      <rect x="-1" y="-1" width={N + 2} height={N + 2} fill="#fff" />
+      {cells.map(([r, c]) => <rect key={`${r}-${c}`} x={c} y={r} width="1.02" height="1.02" fill={C.ink} />)}
+    </svg>
+  );
+}
+
+function MiniGate({ open }) {
+  return (
+    <svg viewBox="-2 -84 122 126" className="h-[72px] w-[70px]" aria-hidden>
+      <rect x="96" y="14" width="10" height="26" rx="2" fill={C.ink} />
+      <g style={{ transform: `rotate(${open ? 75 : 0}deg)`, transformBox: "view-box", transformOrigin: "101px 18px", transition: "transform .7s cubic-bezier(.3,1.35,.5,1)" }}>
+        <rect x="6" y="15" width="96" height="6" rx="3" fill="#f4efe6" stroke={C.ink} strokeWidth=".6" />
+        {[0, 1, 2, 3].map(k => <rect key={k} x={12 + k * 22} y="15" width="11" height="6" fill={C.rust} />)}
+      </g>
+    </svg>
+  );
+}
+
+const field = "w-full rounded-xl border border-[#cfd8d2] bg-white px-3 py-2.5 text-[14px] text-[#022a2a] outline-none focus:border-[#184948] focus:ring-2 focus:ring-[#184948]/15";
+const label = "mb-1 block text-[14px] font-medium text-[#55655f]";
+const primary = "flex w-full items-center justify-center gap-2 rounded-xl bg-[#184948] py-3 text-[14px] font-bold text-white transition hover:bg-[#123b3a] active:scale-[.98]";
+
+function PassTab() {
+  const [f, setF] = useState({ name: "Alex Rivera", plate: "WXX 8892", date: "2026-10-24", purpose: "Guest" });
+  const [pass, setPass] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (!pass) return; setOpen(false); const t = setTimeout(() => setOpen(true), 700); return () => clearTimeout(t); }, [pass]);
+  const submit = (e) => { e.preventDefault(); setPass({ ...f, plate: f.plate.toUpperCase(), code: "GW-" + (hash(f.name + f.plate + Date.now()) % 900000 + 100000) }); };
+  if (pass) return (
+    <motion.div initial={{ y: 30, opacity: 0, rotate: -2 }} animate={{ y: 0, opacity: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 160, damping: 18 }} className="space-y-3">
+      <div className="relative overflow-hidden rounded-2xl bg-white shadow-[0_10px_30px_-12px_rgba(2,42,42,.35)]">
+        <div className="flex items-center justify-between bg-[#184948] px-4 py-2.5 text-white">
+          <span className="slab text-[14px] font-bold tracking-[.18em]">VISITOR</span>
+          <span className="mono text-[14px] text-[#c08e39]">{pass.code}</span>
+        </div>
+        <div className="mx-auto mt-[-6px] h-3 w-14 rounded-b-full bg-[#eef1ec]" />
+        <div className="flex flex-col items-center px-4 pb-4 pt-2">
+          <PassCode seed={pass.code} />
+          <div className="mt-3 text-[16px] font-bold">{pass.name}</div>
+          <div className="mt-1 flex items-center gap-2 text-[14px] text-[#55655f]"><span className="plate px-2 py-0.5 text-[14px]">{pass.plate}</span>{pass.purpose}</div>
+          <div className="mt-1 text-[14px] text-[#55655f]">Valid {new Date(pass.date + "T00:00").toLocaleDateString("en-MY", { weekday: "short", day: "numeric", month: "short" })} · Unit A-12-04</div>
+        </div>
+        <div className="flex items-center justify-between border-t border-dashed border-[#cfd8d2] px-4 py-2.5">
+          <span className="text-[14px] font-medium" style={{ color: open ? C.green : C.muted }}>{open ? "Gate 1 primed for plate" : "Sending to guardhouse…"}</span>
+          <MiniGate open={open} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 1600); }} className="flex items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-[14px] font-bold ring-1 ring-[#cfd8d2]">{copied ? <Check size={16} /> : <Copy size={16} />}{copied ? "Copied" : "Share link"}</button>
+        <button onClick={() => setPass(null)} className="flex items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-[14px] font-bold ring-1 ring-[#cfd8d2]"><RotateCcw size={16} />New pass</button>
+      </div>
+    </motion.div>
+  );
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <h3 className="slab text-[20px] font-bold">Who's visiting?</h3>
+      <div><label className={label} htmlFor="v-name">Visitor name</label><input id="v-name" required className={field} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} /></div>
+      <div><label className={label} htmlFor="v-plate">Car plate</label><input id="v-plate" required className={field + " mono font-bold uppercase tracking-wider"} value={f.plate} onChange={e => setF({ ...f, plate: e.target.value })} /></div>
+      <div className="grid grid-cols-2 gap-2">
+        <div><label className={label} htmlFor="v-date">Date</label><input id="v-date" type="date" className={field + " px-2"} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></div>
+        <div><label className={label} htmlFor="v-purpose">Purpose</label><select id="v-purpose" className={field + " px-2"} value={f.purpose} onChange={e => setF({ ...f, purpose: e.target.value })}><option>Guest</option><option>Delivery</option><option>Contractor</option></select></div>
+      </div>
+      <button type="submit" className={primary}><Ticket size={17} />Create pass</button>
+    </form>
+  );
+}
+
+const FLOW = ["Received", "Assigned", "On site", "Resolved"];
+function TicketsTab() {
+  const [list, setList] = useState([{ id: 1042, cat: "Water pipe leak", loc: "A-12-04 kitchen", step: 2 }]);
+  const [cat, setCat] = useState("Corridor light out");
+  const [loc, setLoc] = useState("Block A, level 12");
+  const [photo, setPhoto] = useState(false);
+  useEffect(() => { const t = setInterval(() => setList(l => l.map(x => x.step < 3 && x.id !== 1042 ? { ...x, step: x.step + 1 } : x)), 2600); return () => clearInterval(t); }, []);
+  const submit = (e) => { e.preventDefault(); setList(l => [{ id: 1043 + l.length - 1, cat, loc, step: 0, photo }, ...l]); setPhoto(false); };
+  return (
+    <div className="space-y-3">
+      <form onSubmit={submit} className="space-y-2.5 rounded-2xl bg-white p-3 ring-1 ring-[#dfe5e0]">
+        <h3 className="slab text-[18px] font-bold">Report a problem</h3>
+        <select aria-label="Issue" className={field} value={cat} onChange={e => setCat(e.target.value)}>{["Corridor light out", "Water pipe leak", "Ceiling leak", "Lift not working", "Barrier gate fault"].map(o => <option key={o}>{o}</option>)}</select>
+        <input aria-label="Location" className={field} value={loc} onChange={e => setLoc(e.target.value)} />
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setPhoto(p => !p)} className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] font-bold ring-1 ${photo ? "bg-[#184948]/10 text-[#184948] ring-[#184948]" : "ring-[#cfd8d2]"}`}><Camera size={16} />{photo ? "Photo added" : "Add photo"}</button>
+          <button type="submit" className="flex-1 rounded-xl bg-[#184948] py-2.5 text-[14px] font-bold text-white">Submit</button>
+        </div>
+      </form>
+      <AnimatePresence initial={false}>
+        {list.map(t => (
+          <motion.div layout key={t.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-white p-3 ring-1 ring-[#dfe5e0]">
+            <div className="flex items-baseline justify-between"><span className="text-[14px] font-bold">{t.cat}</span><span className="mono text-[14px] text-[#55655f]">#{t.id}</span></div>
+            <div className="text-[14px] text-[#55655f]">{t.loc}{t.photo ? " · 1 photo" : ""}</div>
+            <div className="mt-2 flex gap-1">{FLOW.map((s, k) => <div key={s} className="h-1.5 flex-1 rounded-full transition-colors duration-500" style={{ background: k <= t.step ? (t.step === 3 ? C.green : C.brass) : "#dfe5e0" }} />)}</div>
+            <div className="mt-1 text-[14px] font-medium" style={{ color: t.step === 3 ? C.green : C.brass }}>{FLOW[t.step]}{t.step === 1 ? " · Encik Rahman" : ""}</div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function NfcTab() {
+  const [state, setState] = useState("ready");
+  const timers = useRef([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const tap = () => {
+    if (state !== "ready") return;
+    setState("reading");
+    timers.current.push(setTimeout(() => setState("open"), 900), setTimeout(() => setState("ready"), 4200));
+  };
+  const open = state === "open";
+  return (
+    <div className="flex flex-col items-center pt-2 text-center">
+      <h3 className="slab text-[20px] font-bold">Main Lobby Gate</h3>
+      <p className="text-[14px] text-[#55655f]">Hold your phone to the reader</p>
+      <button onClick={tap} aria-label="Tap to unlock" className="relative my-8 grid h-44 w-44 place-items-center rounded-full">
+        {state !== "open" && [0, 0.6, 1.2].map(d => <span key={d} className="ring absolute inset-0 rounded-full border-2" style={{ borderColor: C.green, animationDelay: `${d}s`, animationDuration: state === "reading" ? ".7s" : "1.8s" }} />)}
+        <motion.span animate={{ scale: state === "reading" ? 0.92 : 1, backgroundColor: open ? C.green : "#ffffff" }} className="relative grid h-36 w-36 place-items-center rounded-full shadow-[0_12px_30px_-10px_rgba(2,42,42,.4)]">
+          {open ? <Check size={56} color="#fff" strokeWidth={2.5} /> : <Nfc size={52} color={C.green} />}
+        </motion.span>
+      </button>
+      <div className="h-6 text-[16px] font-bold" style={{ color: open ? C.green : C.ink }}>{state === "ready" ? "Tap the circle" : state === "reading" ? "Reading key…" : "Unlocked · welcome home"}</div>
+      <MiniGate open={open} />
+      <div className="mt-4 w-full rounded-2xl bg-white p-3 text-left ring-1 ring-[#dfe5e0]">
+        <div className="flex items-center gap-2 text-[14px] font-bold"><KeyRound size={16} color={C.brass} />Resident · full access</div>
+        <div className="mono mt-1 text-[14px] text-[#55655f]">NFC-9902-331</div>
+      </div>
+    </div>
+  );
+}
+
+function SosButton({ icon: Icon, title, sub }) {
+  const [p, setP] = useState(0);
+  const [done, setDone] = useState(false);
+  const raf = useRef();
+  const start = () => { if (done) return; const t0 = performance.now(); const step = (now) => { const v = Math.min(1, (now - t0) / 1200); setP(v); if (v < 1) raf.current = requestAnimationFrame(step); else { setDone(true); setTimeout(() => { setDone(false); setP(0); }, 2600); } }; raf.current = requestAnimationFrame(step); };
+  const stop = () => { cancelAnimationFrame(raf.current); if (!done) setP(0); };
+  return (
+    <button onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onKeyDown={e => (e.key === " " || e.key === "Enter") && !e.repeat && start()} onKeyUp={stop}
+      className="relative overflow-hidden rounded-2xl p-3 text-left text-white select-none touch-none" style={{ background: C.rust }}>
+      <span className="absolute inset-y-0 left-0 bg-black/25" style={{ width: `${p * 100}%` }} />
+      <span className="relative block"><Icon size={20} /><span className="mt-1 block text-[14px] font-bold">{done ? "Calling…" : title}</span><span className="block text-[14px] opacity-80">{done ? sub : "Hold to call"}</span></span>
+    </button>
+  );
+}
+
+function HubTab() {
+  const [items, setItems] = useState([{ t: "Found: car keys", l: "Clubhouse gym · at guardhouse" }]);
+  const [adding, setAdding] = useState(false);
+  const [t, setT] = useState(""); const [l, setL] = useState("");
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2"><SosButton icon={ShieldCheck} title="Security" sub="Gate post · 24/7" /><SosButton icon={Stethoscope} title="Medic" sub="Township first aid" /></div>
+      <div className="rounded-2xl bg-white p-3 ring-1 ring-[#dfe5e0]">
+        <div className="flex items-center gap-2 text-[14px] font-bold text-[#c08e39]"><Megaphone size={16} />Management notice</div>
+        <div className="mt-1 text-[14px] font-bold">Pool closed Thursday, 9 am to 1 pm</div>
+        <div className="text-[14px] text-[#55655f]">Filter servicing. Gym stays open.</div>
+      </div>
+      <div className="rounded-2xl bg-white p-3 ring-1 ring-[#dfe5e0]">
+        <div className="flex items-center justify-between"><span className="text-[14px] font-bold">Lost & found</span><button onClick={() => setAdding(a => !a)} className="flex items-center gap-1 text-[14px] font-bold text-[#184948]"><Plus size={16} />Post</button></div>
+        {adding && <form onSubmit={e => { e.preventDefault(); if (!t.trim()) return; setItems([{ t, l: l || "Greenwood" }, ...items]); setT(""); setL(""); setAdding(false); }} className="mt-2 space-y-2">
+          <input aria-label="Item" placeholder="Lost: blue umbrella" className={field} value={t} onChange={e => setT(e.target.value)} />
+          <input aria-label="Where" placeholder="Where?" className={field} value={l} onChange={e => setL(e.target.value)} />
+          <button className={primary}>Post to board</button>
+        </form>}
+        <div className="mt-2 space-y-2">{items.map((x, k) => <div key={k} className="rounded-xl bg-[#eef1ec] px-3 py-2"><div className="text-[14px] font-bold">{x.t}</div><div className="text-[14px] text-[#55655f]">{x.l}</div></div>)}</div>
+      </div>
+    </div>
+  );
+}
+
+export default function Phone({ tab, setTab }) {
+  const Body = { pass: PassTab, tickets: TicketsTab, nfc: NfcTab, hub: HubTab }[tab];
+  return (
+    <div className="relative mx-auto w-[340px] rounded-[48px] bg-[#022a2a] p-3 shadow-[0_40px_80px_-30px_rgba(2,42,42,.6)]">
+      <div className="absolute left-1/2 top-5 z-10 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
+      <div className="flex h-[660px] flex-col overflow-hidden rounded-[38px] bg-[#eef1ec]">
+        <div className="flex items-center justify-between px-7 pb-1 pt-4 text-[14px] font-bold"><span>9:41</span><span className="mono">5G</span></div>
+        <div className="flex items-center justify-between px-5 pb-3 pt-3">
+          <div><div className="text-[14px] text-[#55655f]">Greenwood Township</div><div className="slab text-[18px] font-bold leading-tight">Unit A-12-04</div></div>
+          <div className="slab grid h-10 w-10 place-items-center rounded-full bg-[#184948] text-[14px] font-bold text-[#c08e39]">SL</div>
+        </div>
+        <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
+          <AnimatePresence mode="wait"><motion.div key={tab} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}><Body /></motion.div></AnimatePresence>
+        </div>
+        <nav className="grid grid-cols-4 border-t border-[#dfe5e0] bg-white px-2 pb-5 pt-2">
+          {TABS.map(({ id, label, icon: I }) => (
+            <button key={id} onClick={() => setTab(id)} aria-pressed={tab === id} className="flex flex-col items-center gap-0.5 py-1 text-[14px] font-medium" style={{ color: tab === id ? C.green : "#5e6c67" }}>
+              <I size={21} strokeWidth={tab === id ? 2.4 : 1.8} />{label}
+            </button>
+          ))}
+        </nav>
+      </div>
+    </div>
+  );
+}
