@@ -1,0 +1,254 @@
+/*
+SUBJECT: SmartLiving, a resident + security + estate app for Malaysian gated townships (Greenwood).
+AUDIENCE: developers, JMBs and estate managers. JOB: let them play the app, then ask for a quote.
+WORLD ARTIFACT: the guardhouse boom gate + laminated VISITOR pass + black Malaysian number plate.
+TYPE: Roboto Slab 700/800 (signage) · Roboto (text) · Roboto Mono bold (plates, codes).
+COLOR: rainforest green #184948 (lead ground) · ink #022a2a · brass #c08e39 (house-number accent)
+       · barrier rust #944839 (boom arm + SOS only) · concrete #eef1ec bg. No navy/emerald glass.
+LAYOUT: green hero with a live gatehouse scene across its foot → split demo (module list | phone)
+       → asymmetric feature bento → before/after → savings calculator → FAQ → closing gate CTA.
+SIGNATURE: the boom gate lifting for a matched plate; the same arm lifts inside the app.
+*/
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowRight, Ticket, Wrench, Nfc, Siren, Megaphone, BarChart3, Plus, Menu, X } from "lucide-react";
+import "./styles.css";
+import { C } from "./theme";
+import GateScene from "./GateScene";
+import Phone, { TABS } from "./Phone";
+
+const MODULES = {
+  pass: { title: "Visitor passes", line: "Guest's plate goes in, the guardhouse knows before they arrive." },
+  tickets: { title: "Repair tickets", line: "Photo, location, done. Watch it move from received to resolved." },
+  nfc: { title: "Phone as keycard", line: "Tap the gate reader. No more lost access cards." },
+  hub: { title: "SOS & community", line: "Hold to call security. Notices and lost & found in one feed." },
+};
+
+const fade = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" }, transition: { duration: 0.5, ease: [0.2, 0.7, 0.2, 1] } };
+
+function Nav() {
+  const [open, setOpen] = useState(false);
+  const links = [["Demo", "#demo"], ["Features", "#features"], ["Before & after", "#compare"], ["Savings", "#savings"], ["FAQ", "#faq"]];
+  return (
+    <header className="sticky top-0 z-50 bg-[#184948]/95 text-white backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+        <a href="#top" className="flex items-center gap-2.5">
+          <span className="slab grid h-9 w-9 place-items-center rounded-lg bg-[#c08e39] text-[15px] font-extrabold text-[#022a2a]">SL</span>
+          <span className="slab text-[19px] font-bold">SmartLiving</span>
+        </a>
+        <nav className="hidden items-center gap-7 text-[14px] font-medium text-white/80 md:flex">
+          {links.map(([l, h]) => <a key={h} href={h} className="hover:text-white">{l}</a>)}
+          <a href="#demo" className="rounded-full bg-[#c08e39] px-4 py-2 font-bold text-[#022a2a] hover:bg-[#d29e47]">Try the app</a>
+        </nav>
+        <button className="md:hidden" onClick={() => setOpen(o => !o)} aria-label="Menu">{open ? <X /> : <Menu />}</button>
+      </div>
+      {open && <div className="space-y-1 px-5 pb-5 md:hidden">{links.map(([l, h]) => <a key={h} href={h} onClick={() => setOpen(false)} className="block py-2 text-[16px]">{l}</a>)}</div>}
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section id="top" className="relative overflow-hidden bg-[#184948] text-white">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-6 pt-16 md:grid-cols-12 md:pt-24">
+        <div className="md:col-span-8">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="slab text-[44px] font-extrabold leading-[1.02] tracking-[-0.02em] sm:text-[68px]">
+            The gate already knows <span className="text-[#c08e39]">who's coming.</span>
+          </motion.h1>
+          <p className="mt-6 max-w-xl text-[18px] leading-relaxed text-white/75">Visitor passes, phone keycards, repairs and SOS for your township. One app for residents, guards and management.</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a href="#demo" className="flex items-center gap-2 rounded-full bg-[#c08e39] px-6 py-3.5 text-[16px] font-bold text-[#022a2a] hover:bg-[#d29e47]">Try the live app <ArrowRight size={18} /></a>
+            <a href="#savings" className="rounded-full px-6 py-3.5 text-[16px] font-bold ring-1 ring-white/30 hover:bg-white/10">Estimate savings</a>
+          </div>
+        </div>
+        <div className="flex gap-8 self-end md:col-span-4 md:flex-col md:items-end md:gap-5 md:text-right">
+          {[["85%", "faster gate clearance"], ["< 5s", "plate to boom up"], ["< 2h", "avg repair response"]].map(([n, l]) => (
+            <div key={l}><div className="slab text-[32px] font-extrabold leading-none text-[#e2b25e] sm:text-[40px]">{n}</div><div className="mt-1 text-[14px] text-white/85">{l}</div></div>
+          ))}
+        </div>
+      </div>
+      <div style={{ background: "linear-gradient(transparent 76.9%, #022a2a 76.9%)" }}><div className="mx-auto max-w-[1400px]"><GateScene /></div></div>
+    </section>
+  );
+}
+
+function Demo() {
+  const [tab, setTab] = useState("pass");
+  return (
+    <section id="demo" className="scroll-mt-16 py-20 md:py-28">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-12">
+        <div className="lg:col-span-6">
+          <h2 className="slab text-[36px] font-extrabold leading-tight sm:text-[48px]">Go on, press things.</h2>
+          <p className="mt-3 text-[18px] text-[#55655f]">This is the actual resident app. Every screen works.</p>
+          <div className="mt-8 space-y-2">
+            {TABS.map(({ id, icon: I }) => {
+              const on = tab === id;
+              return (
+                <button key={id} onClick={() => setTab(id)} aria-pressed={on} className={`flex w-full items-start gap-4 rounded-2xl p-4 text-left transition ${on ? "bg-white shadow-[0_12px_30px_-18px_rgba(2,42,42,.5)]" : "hover:bg-white/60"}`}>
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ background: on ? C.green : "#dde4df", color: on ? C.brass : C.green }}><I size={20} /></span>
+                  <span><span className="block text-[17px] font-bold">{MODULES[id].title}</span><span className="block text-[16px] text-[#55655f]">{MODULES[id].line}</span></span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="lg:col-span-6"><Phone tab={tab} setTab={setTab} /></div>
+      </div>
+    </section>
+  );
+}
+
+function Features() {
+  return (
+    <section id="features" className="scroll-mt-16 bg-[#022a2a] py-20 text-white md:py-28">
+      <div className="mx-auto max-w-6xl px-5">
+        <motion.h2 {...fade} className="slab max-w-2xl text-[36px] font-extrabold leading-tight sm:text-[48px]">Everything the guardhouse logbook never could.</motion.h2>
+        <div className="mt-12 grid gap-4 md:grid-cols-6">
+          <motion.div {...fade} className="rounded-3xl bg-[#184948] p-7 md:col-span-4 md:row-span-2">
+            <Ticket color={C.brass} />
+            <h3 className="slab mt-4 text-[28px] font-bold">Visitor gatekeeper</h3>
+            <p className="mt-2 max-w-md text-[16px] text-white/85">Residents pre-register plates. Guards see who, which unit, and why, the second the car pulls up.</p>
+            <div className="mt-8 space-y-2">
+              {[["WXX 8892", "Delivery · A-12-04", "Cleared 10:42"], ["BMK 3107", "Guest · C-03-11", "Cleared 10:47"], ["VDA 562", "Contractor · B-07-02", "Expected 11:00"]].map(([p, w, s], k) => (
+                <div key={p} className="flex items-center gap-4 rounded-xl bg-[#022a2a]/50 px-4 py-3">
+                  <span className="plate w-[100px] py-1 text-center text-[14px]">{p}</span><span className="flex-1 text-[14px] text-white/80">{w}</span>
+                  <span className="text-[14px] font-medium" style={{ color: k < 2 ? "#8fd9ae" : "#eeba67" }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+          {[
+            [Nfc, "Phone keycard", "Encrypted NFC on iOS and Android. Time-boxed keys for cleaners."],
+            [Wrench, "Repair tracker", "Photo tickets with live status and SLA clocks."],
+          ].map(([I, t, d]) => (
+            <motion.div {...fade} key={t} className="rounded-3xl bg-white/[.06] p-6 md:col-span-2"><I color={C.brass} /><h3 className="slab mt-3 text-[20px] font-bold">{t}</h3><p className="mt-1 text-[16px] text-white/80">{d}</p></motion.div>
+          ))}
+          <motion.div {...fade} className="rounded-3xl p-6 md:col-span-2" style={{ background: C.rust }}><Siren /><h3 className="slab mt-3 text-[20px] font-bold">One-hold SOS</h3><p className="mt-1 text-[16px] text-white/80">Straight to the gate post or medic. Broadcast alerts to every unit.</p></motion.div>
+          <motion.div {...fade} className="rounded-3xl bg-white/[.06] p-6 md:col-span-2"><Megaphone color={C.brass} /><h3 className="slab mt-3 text-[20px] font-bold">Community board</h3><p className="mt-1 text-[16px] text-white/80">Official notices, events and lost & found. Not another WhatsApp group.</p></motion.div>
+          <motion.div {...fade} className="flex flex-col justify-between gap-6 rounded-3xl bg-[#c08e39] p-6 text-[#022a2a] md:col-span-2">
+            <div><BarChart3 /><h3 className="slab mt-3 text-[20px] font-bold">Management panel</h3><p className="mt-1 text-[16px] text-[#022a2a]/75">Gate logs, SLA tracking and broadcasts.</p></div>
+            <div className="flex h-14 items-end gap-1.5">{[40, 62, 48, 80, 70, 92, 66].map((h, k) => <motion.div key={k} initial={{ height: 4 }} whileInView={{ height: `${h}%` }} viewport={{ once: true }} transition={{ delay: k * 0.06, duration: 0.5 }} className="flex-1 rounded-t bg-[#022a2a]/80" />)}</div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const ROWS = [
+  ["Visitors", "Paper logbook, IC held at the guardhouse, queue at the gate", "Plate matched in under 5 seconds"],
+  ["Access", "Plastic cards that get lost, cloned or cracked", "Phone tap at every reader"],
+  ["Repairs", "Phone calls and emails into the void", "Photo ticket with live status"],
+  ["Emergencies", "Hunting for the guard's number", "Hold one button"],
+  ["Notices", "Flyers in the lift and a 300-person chat", "One official feed"],
+];
+function Compare() {
+  return (
+    <section id="compare" className="scroll-mt-16 py-20 md:py-28">
+      <div className="mx-auto max-w-6xl px-5">
+        <motion.h2 {...fade} className="slab text-[36px] font-extrabold leading-tight sm:text-[48px]">Before, and after.</motion.h2>
+        <div className="mt-10 overflow-hidden rounded-3xl bg-white ring-1 ring-[#dfe5e0]">
+          {ROWS.map(([a, b, c], k) => (
+            <motion.div {...fade} key={a} className={`grid gap-2 px-6 py-5 md:grid-cols-12 md:items-center md:gap-6 ${k ? "border-t border-[#e6ebe7]" : ""}`}>
+              <div className="slab text-[18px] font-bold md:col-span-2">{a}</div>
+              <div className="text-[16px] text-[#55655f] line-through decoration-[#944839]/60 md:col-span-5">{b}</div>
+              <div className="flex items-center gap-2 text-[16px] font-bold text-[#184948] md:col-span-5"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#184948] text-white"><ArrowRight size={14} /></span>{c}</div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Slider({ id, label, v, set, min, max, step, unit }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between"><label htmlFor={id} className="text-[16px] font-medium text-white/80">{label}</label><span className="slab text-[24px] font-bold">{v.toLocaleString()} <span className="text-[16px] font-medium text-white/80">{unit}</span></span></div>
+      <input id={id} type="range" min={min} max={max} step={step} value={v} onChange={e => set(+e.target.value)} className="mt-3 w-full" />
+    </div>
+  );
+}
+
+function Savings() {
+  const [units, setUnits] = useState(350);
+  const [visits, setVisits] = useState(12);
+  const monthly = units * visits;
+  const out = [
+    [(monthly * 12).toLocaleString(), "paper slips saved a year"],
+    [`${Math.round((monthly * 2.5) / 60).toLocaleString()} hrs`, "guard time freed a month"],
+    [`RM ${Math.round(units * 22).toLocaleString()}`, "admin cost saved a month"],
+  ];
+  return (
+    <section id="savings" className="scroll-mt-16 px-5 pb-20 md:pb-28">
+      <div className="mx-auto grid max-w-[1112px] gap-10 rounded-[32px] bg-[#184948] p-8 text-white md:grid-cols-2 md:p-14">
+        <div>
+          <h2 className="slab text-[36px] font-extrabold leading-tight sm:text-[44px]">What your township gets back.</h2>
+          <div className="mt-10 space-y-8">
+            <Slider id="u" label="Housing units" v={units} set={setUnits} min={50} max={2000} step={10} unit="units" />
+            <Slider id="vi" label="Visitors per unit, monthly" v={visits} set={setVisits} min={2} max={50} step={1} unit="visits" />
+          </div>
+        </div>
+        <div className="flex flex-col justify-center gap-4">
+          {out.map(([n, l]) => (
+            <div key={l} className="rounded-2xl bg-[#022a2a]/40 px-6 py-5">
+              <div className="slab text-[40px] font-extrabold leading-none text-[#eeba67]">{n}</div>
+              <div className="mt-1.5 text-[16px] text-white/85">{l}</div>
+            </div>
+          ))}
+          <p className="text-[14px] text-white/80">Assumes one slip per visit, 2.5 min saved per gate check, RM 22 admin cost per unit.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const FAQS = [
+  ["Does the NFC key work on iPhone and Android?", "Yes. It uses the phone's built-in encrypted NFC, so residents just tap at barriers and facility readers."],
+  ["What if a visitor has no smartphone?", "Residents send the pass by SMS or WhatsApp, or simply register the car plate. Guards verify it on the guardhouse tablet."],
+  ["Will it work with our existing boom gates?", "Yes. Our controllers retrofit existing boom gates, turnstiles and magnetic locks."],
+  ["How is resident data protected?", "Records are encrypted with AES-256 and handled in line with PDPA and GDPR."],
+];
+function Faq() {
+  const [open, setOpen] = useState(0);
+  return (
+    <section id="faq" className="scroll-mt-16 pb-20 md:pb-28">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-12">
+        <h2 className="slab text-[36px] font-extrabold leading-tight md:col-span-4 sm:text-[44px]">Questions guards and JMBs ask.</h2>
+        <div className="md:col-span-8">
+          {FAQS.map(([q, a], k) => (
+            <div key={q} className="border-b border-[#d3dbd5]">
+              <button onClick={() => setOpen(open === k ? -1 : k)} aria-expanded={open === k} className="flex w-full items-center justify-between gap-4 py-5 text-left text-[18px] font-bold">
+                {q}<Plus size={20} className="shrink-0 transition-transform" style={{ transform: open === k ? "rotate(45deg)" : "none", color: C.brass }} />
+              </button>
+              <motion.div initial={false} animate={{ height: open === k ? "auto" : 0, opacity: open === k ? 1 : 0 }} className="overflow-hidden"><p className="pb-5 text-[16px] leading-relaxed text-[#55655f]">{a}</p></motion.div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Closing() {
+  return (
+    <footer className="bg-[#022a2a] text-white">
+      <div className="mx-auto max-w-6xl px-5 py-20 text-center">
+        <div className="stripes mx-auto mb-10 h-3 w-48 rounded-full" />
+        <h2 className="slab text-[40px] font-extrabold leading-tight sm:text-[56px]">Lift the gate on paperwork.</h2>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <a href="mailto:?subject=SmartLiving%20quote%20request" className="flex items-center gap-2 rounded-full bg-[#c08e39] px-6 py-3.5 text-[16px] font-bold text-[#022a2a] hover:bg-[#d29e47]">Request a quote <ArrowRight size={18} /></a>
+          <a href="#demo" className="rounded-full px-6 py-3.5 text-[16px] font-bold ring-1 ring-white/30 hover:bg-white/10">Replay the demo</a>
+        </div>
+      </div>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-white/10 px-5 py-6 text-[14px] text-white/75">
+        <span>© 2026 SmartLiving · Township Hub</span>
+        <span>App Store · Google Play · Privacy · Terms</span>
+      </div>
+    </footer>
+  );
+}
+
+export default function App() {
+  return (<><Nav /><Hero /><Demo /><Features /><Compare /><Savings /><Faq /><Closing /></>);
+}
