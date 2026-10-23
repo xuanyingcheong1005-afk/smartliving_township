@@ -1,0 +1,103 @@
+import { useRef, useState } from "react";
+import { motion, useAnimationFrame, useReducedMotion } from "framer-motion";
+import { C } from "./theme";
+
+const VISITS = [
+  { plate: "WXX 8892", who: "Delivery", unit: "A-12-04", car: C.brass },
+  { plate: "BMK 3107", who: "Guest", unit: "C-03-11", car: "#e9ece6" },
+  { plate: "VDA 562", who: "Contractor", unit: "B-07-02", car: C.moss },
+];
+const CYCLE = 8000;
+const seg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2);
+
+function Tree({ x, s = 1, shade }) {
+  return (
+    <g transform={`translate(${x} ${200 - 70 * s})`}>
+      <rect x={-3 * s} y={40 * s} width={6 * s} height={30 * s} fill={C.ink} opacity=".5" />
+      <g className="sway"><circle cx="0" cy={26 * s} r={26 * s} fill={shade} /><circle cx={-14 * s} cy={38 * s} r={16 * s} fill={shade} /></g>
+    </g>
+  );
+}
+
+export default function GateScene() {
+  const reduce = useReducedMotion();
+  const carRef = useRef(null);
+  const armRef = useRef(null);
+  const carX = { set: (x) => carRef.current?.setAttribute("transform", `translate(${x} 0)`) };
+  const arm = { set: (a) => armRef.current?.setAttribute("transform", `rotate(${a} 770 158)`) };
+  const [i, setI] = useState(0);
+  const [phase, setPhase] = useState(reduce ? "clear" : "idle");
+  const last = useRef({ cycle: 0, phase: "idle" });
+
+  useAnimationFrame((time) => {
+    if (reduce) return;
+    const cycle = Math.floor(time / CYCLE);
+    const t = (time % CYCLE) / CYCLE;
+    carX.set(t < 0.3 ? -260 + 620 * ease(seg(t, 0, 0.3)) : t < 0.52 ? 360 : -260 + 620 + 940 * ease(seg(t, 0.52, 0.8)));
+    arm.set(t < 0.44 ? 0 : t < 0.8 ? 78 * ease(seg(t, 0.44, 0.52)) : 78 * (1 - ease(seg(t, 0.8, 0.9))));
+    const p = t < 0.28 ? "idle" : t < 0.44 ? "scan" : t < 0.86 ? "clear" : "idle";
+    if (cycle !== last.current.cycle) { last.current.cycle = cycle; setI(cycle % VISITS.length); }
+    if (p !== last.current.phase) { last.current.phase = p; setPhase(p); }
+  });
+
+  const v = VISITS[i];
+  const screen = phase === "scan" ? "READING PLATE…" : phase === "clear" ? `${v.plate} · CLEARED` : "GATE 1 · READY";
+
+  return (
+    <svg viewBox="0 0 1200 260" preserveAspectRatio="xMidYMax slice" className="block h-[190px] w-full sm:h-auto" role="img" aria-label="Animated guardhouse: a car arrives, its plate is matched to a visitor pass and the boom gate lifts">
+      {/* skyline: terraces + condo blocks */}
+      <g fill="#1f5553">
+        <rect x="40" y="90" width="70" height="110" /><rect x="120" y="60" width="54" height="140" /><rect x="1000" y="80" width="54" height="120" /><rect x="1080" y="50" width="58" height="150" />
+      </g>
+      <g fill="#2a6260">{[0,1,2,3].map(k => <path key={k} d={`M${200 + k * 46} 200 v-44 l23 -18 l23 18 v44z`} />)}</g>
+      <g fill="#2f6d69" opacity=".7">{[[60,100],[132,72],[1010,94],[1092,64]].map(([x,y],k)=>[0,1,2,3,4].map(r=><rect key={`${k}${r}`} x={x} y={y+r*20} width="10" height="8" />))}</g>
+      <Tree x={360} s={1} shade="#245e5b" /><Tree x={1080} s={1.1} shade="#245e5b" /><Tree x={1160} s={0.9} shade="#2a6662" />
+      {/* road */}
+      <rect x="0" y="200" width="1200" height="60" fill={C.ink} />
+      <rect x="0" y="200" width="1200" height="4" fill="#0d3b3a" />
+      <g fill="#c08e39" opacity=".55">{Array.from({ length: 20 }, (_, k) => <rect key={k} x={k * 64} y="232" width="34" height="3" />)}</g>
+      {/* guardhouse */}
+      <g transform="translate(250 0)">
+        <rect x="560" y="112" width="150" height="88" fill="#d9dfd8" />
+        <rect x="548" y="100" width="174" height="16" fill={C.ink} />
+        <rect x="574" y="128" width="78" height="40" fill="#0b2423" />
+        <text x="613" y="153" textAnchor="middle" className="mono" fontSize="9.5" fontWeight="700" fill={phase === "clear" ? "#7fe0a8" : C.brass}>{screen}</text>
+        <rect x="666" y="128" width="30" height="72" fill={C.green} />
+        <text x="635" y="111" textAnchor="middle" className="slab" fontSize="10" fontWeight="700" fill={C.brass} letterSpacing="3">GREENWOOD</text>
+        {/* camera */}
+        </g>
+      <rect x="790" y="96" width="22" height="10" rx="2" fill={C.ink} /><circle cx="793" cy="101" r="2.5" fill={phase === "scan" ? "#ff6b4a" : "#3b5"} />
+      {phase === "scan" && <path d="M790 103 L530 168 L556 200 Z" fill={C.brass} className="beam" />}
+      {/* barrier post + arm */}
+      <rect x="760" y="150" width="20" height="50" rx="3" fill="#d9dfd8" />
+      <rect x="760" y="150" width="20" height="8" fill={C.brass} />
+      <g ref={armRef} transform={reduce ? "rotate(78 770 158)" : undefined}>
+        <rect x="560" y="153" width="210" height="10" rx="5" fill="#f4efe6" />
+        {Array.from({ length: 5 }, (_, k) => <rect key={k} x={570 + k * 40} y="153" width="20" height="10" fill={C.rust} />)}
+      </g>
+      <circle cx="770" cy="158" r="5" fill={C.ink} />
+      {/* car */}
+      <g ref={carRef} transform={`translate(${reduce ? 360 : -260} 0)`}>
+        <g transform="translate(0 0)">
+          <path d="M8 196 v-26 q0 -8 8 -9 l34 -4 l26 -22 q6 -5 14 -5 h52 q8 0 13 6 l18 22 l14 3 q10 2 10 12 v23z" fill={v.car} />
+          <path d="M60 156 l20 -17 q4 -3 8 -3 h22 v20z M116 136 h20 q5 0 8 4 l13 16 h-41z" fill="#0b2423" opacity=".85" />
+          <circle cx="44" cy="198" r="13" fill="#0b0f0f" /><circle cx="44" cy="198" r="5" fill="#9aa5a0" />
+          <circle cx="150" cy="198" r="13" fill="#0b0f0f" /><circle cx="150" cy="198" r="5" fill="#9aa5a0" />
+          <rect x="182" y="170" width="10" height="5" rx="2" fill="#fff4c9" />
+        </g>
+        <g transform="translate(58 104)">
+          <rect width="84" height="20" rx="3" fill="#0b0f0f" stroke="#3a4242" strokeWidth="1.5" />
+          <text x="42" y="14.5" textAnchor="middle" className="mono" fontSize="12" fontWeight="700" fill="#f4f4ef" letterSpacing="1">{v.plate}</text>
+        </g>
+      </g>
+      {/* pass chip */}
+      <motion.g initial={false} animate={{ opacity: phase === "clear" ? 1 : 0, y: phase === "clear" ? 0 : 8 }} transition={{ duration: 0.35 }}>
+        <rect x="960" y="20" width="210" height="52" rx="10" fill="#f8f9f6" />
+        <circle cx="984" cy="46" r="11" fill={C.green} /><path d="M979 46 l4 4 l7 -8" stroke="#f8f9f6" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <text x="1004" y="41" fontSize="12" fill={C.muted}>Pass matched · {v.who}</text>
+        <text x="1004" y="59" fontSize="14" fontWeight="700" fill={C.ink}>Unit {v.unit} · 4.2s</text>
+      </motion.g>
+    </svg>
+  );
+}
